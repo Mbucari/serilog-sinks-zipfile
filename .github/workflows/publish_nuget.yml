@@ -1,0 +1,44 @@
+# build-windows.yml
+# Reusable workflow that builds the Windows versions of Libation.
+---
+name: build
+
+on:
+  push:
+    branches: [master]
+
+env:
+  DOTNET_CONFIGURATION: 'Release'
+  DOTNET_VERSION: '7.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Pack
+        id: pack
+        working-directory: ./src/Serilog.Sinks.ZipFile
+        run: |
+          dotnet pack \
+              --configuration ${{ env.DOTNET_CONFIGURATION }} \
+              --include-symbols \
+              --output ./
+
+      - name: Push
+        id: push
+        continue-on-error: true
+        working-directory: ./src/Serilog.Sinks.ZipFile
+        run: |         
+          dotnet nuget push *.nupkg \
+          --api-key ${{secrets.NUGET_API_KEY}} \
+          --source https://api.nuget.org/v3/index.json
+         
